@@ -25,13 +25,10 @@ class EventoUpdate(BaseModel):
     tipo: str
 
 
-class EventoCambioEstatus(BaseModel):
-    estatus: str
-
-
-class EventoReprogramar(BaseModel):
+class ReprogramarEvento(BaseModel):
     fechaInicio: date
     fechaFin: date
+    motivo: str
 
 
 class Evento(BaseModel):

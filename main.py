@@ -8,8 +8,7 @@ from models import (
     EventoSalida,
     Evento,
     EventosSalida,
-    EventoCambioEstatus,
-    EventoReprogramar,
+    ReprogramarEvento,
 )
 
 app = FastAPI()
@@ -127,15 +126,15 @@ def consultarEventosPorEstatus(estatus: str) -> EventosSalida:
 
 
 @app.put(
-    "/eventos/estatus/{idEvento}",
+    "/eventos/estatus/{idEvento}/{estatus}",
     tags=["Eventos"],
     summary="Cambio de estatus de un evento",
     response_model=Salida,
 )
-def cambioEstatusEvento(idEvento: str, datos: EventoCambioEstatus) -> Salida:
+def cambioEstatusEvento(idEvento: str, estatus: str) -> Salida:
     salida = Salida(
         codigo=200,
-        mensaje=f"Cambio de estatus del evento con ID {idEvento} a {datos.estatus}",
+        mensaje=f"Cambio de estatus del evento con ID {idEvento} a {estatus}",
     )
     return salida
 
@@ -146,7 +145,7 @@ def cambioEstatusEvento(idEvento: str, datos: EventoCambioEstatus) -> Salida:
     summary="Reprogramar evento",
     response_model=Salida,
 )
-def reprogramarEvento(idEvento: str, datos: EventoReprogramar) -> Salida:
+def reprogramarEvento(idEvento: str, datos: ReprogramarEvento) -> Salida:
     salida = Salida(
         codigo=200,
         mensaje=(
