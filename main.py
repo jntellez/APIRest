@@ -88,6 +88,17 @@ def reprogramarEvento(request: Request, idEvento: str, evento: EventoReprogramad
     return eventoDAO.reprogramar(idEvento, evento)
 
 
+@app.delete(
+    "/eventos/{idEvento}",
+    tags=["Eventos"],
+    summary="Eliminar Evento",
+    response_model=Salida,
+)
+def eliminarEvento(request: Request, idEvento: str) -> Salida:
+    eventoDAO = EventoDAO(request.app.cn.db)
+    return eventoDAO.eliminar(idEvento)
+
+
 @app.on_event("startup")
 def startup():
     conexion = Conexion()

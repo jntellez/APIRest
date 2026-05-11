@@ -240,3 +240,38 @@ class EventoDAO:
             salida.codigo = 404
             salida.mensaje = f"El evento con id:{idEvento} no existe."
         return salida
+
+    def eliminar(self, idEvento: str) -> Salida:
+        salida = Salida(codigo=0, mensaje="")
+
+        if not ObjectId.is_valid(idEvento):
+            salida.codigo = 404
+            salida.mensaje = f"El id del evento:{idEvento} no es valido."
+            return salida
+
+        try:
+            evento = self.col.find_one({"_id": ObjectId(idEvento)})
+            if not evento:
+                salida.codigo = 404
+                salida.mensaje = f"El evento con id:{idEvento} no existe."
+                return salida
+
+            if evento.get("estatus") != "Cancelado":
+                salida.codigo = 404
+                salida.mensaje = (
+                    "El evento no se puede eliminar porque su estatus no es Cancelado."
+                )
+                return salida
+
+            result = self.col.delete_one({"_id": ObjectId(idEvento)})
+            if result.deleted_count > 0:
+                salida.codigo = 200
+                salida.mensaje = f"Evento con id:{idEvento} eliminado exitosamente."
+            else:
+                salida.codigo = 500
+                salida.mensaje = "No fue posible eliminar el evento."
+        except Exception as ex:
+            salida.codigo = 500
+            salida.mensaje = f"Error:{ex}"
+
+        return salida
