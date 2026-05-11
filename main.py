@@ -1,89 +1,47 @@
-from fastapi import FastAPI
-import uvicorn
-from datetime import date
+from fastapi import FastAPI, Request
 from models import (
     EventoCreate,
     Salida,
     EventoUpdate,
     EventoSalida,
-    Evento,
     EventosSalida,
-    ReprogramarEvento,
+    EventoReprogramado,
+    CambioEstatus,
 )
+import uvicorn
+from dao import Conexion, EventoDAO
 
 app = FastAPI()
 
 
-@app.get("/")
-def read_root():
-    return {"message": "Hello World"}
+@app.get("/", tags=["Inicio"], summary="Home")
+def home():
+    return "Bienvenido a la APIRest de Eventos"
 
 
-@app.post(
-    "/eventos",
-    tags=["Eventos"],
-    summary="Crear un evento",
-    response_model=Salida,
-)
-def crearEvento(evento: EventoCreate) -> Salida:
-    salida = Salida(codigo=200, mensaje="Evento creado")
-    return salida
+@app.post("/eventos", tags=["Eventos"], summary="Crear Evento", response_model=Salida)
+async def crearEvento(request: Request, evento: EventoCreate) -> Salida:
+    eventoDAO = EventoDAO(request.app.cn.db)
+    return eventoDAO.agregar(evento)
 
 
 @app.get(
-    "/eventos",
-    tags=["Eventos"],
-    summary="Listar eventos",
-    response_model=EventosSalida,
+    "/eventos", tags=["Eventos"], summary="Listar Eventos", response_model=EventosSalida
 )
-def listarEventos() -> EventosSalida:
-    evento = Evento(
-        idEvento="123",
-        nombre="Platica del Servicio Social",
-        fechaInicio=date.today(),
-        fechaFin=date.today(),
-        cupo=100,
-        estatus="Pendiente",
-        descripcion="Descripcion",
-        tipo="Platica",
-        fechaRegistro=date.today(),
-        inscritos=10,
-    )
-
-    salida = EventosSalida(
-        codigo=200,
-        mensaje="Eventos listados",
-        eventos=[evento],
-    )
-    return salida
+async def listarEventos(request: Request) -> EventosSalida:
+    eventoDAO = EventoDAO(request.app.cn.db)
+    return eventoDAO.consultaGeneral()
 
 
 @app.get(
     "/eventos/{idEvento}",
     tags=["Eventos"],
-    summary="Consultar evento por ID",
+    summary="Listar Evento",
     response_model=EventoSalida,
 )
-def consultarEventoPorID(idEvento: str) -> EventoSalida:
-    evento = Evento(
-        idEvento=idEvento,
-        nombre="Platica del Servicio Social",
-        fechaInicio=date.today(),
-        fechaFin=date.today(),
-        cupo=100,
-        estatus="Pendiente",
-        descripcion="Descripcion",
-        tipo="Platica",
-        fechaRegistro=date.today(),
-        inscritos=10,
-    )
-
-    salida = EventoSalida(
-        codigo=200,
-        mensaje=f"Evento con ID {idEvento} consultado",
-        evento=evento,
-    )
-    return salida
+def listarEvento(request: Request, idEvento: str) -> EventoSalida:
+    eventoDAO = EventoDAO(request.app.cn.db)
+    return eventoDAO.consultaPorID(idEvento)
 
 
 @app.put(
@@ -92,49 +50,32 @@ def consultarEventoPorID(idEvento: str) -> EventoSalida:
     summary="Modificar evento en base a su ID",
     response_model=Salida,
 )
-def modificarEvento(idEvento: str, evento: EventoUpdate) -> Salida:
-    salida = Salida(codigo=200, mensaje=f"Evento con ID {idEvento} modificado")
-    return salida
+def modificarEvento(request: Request, idEvento: str, evento: EventoUpdate) -> Salida:
+    eventoDAO = EventoDAO(request.app.cn.db)
+    return eventoDAO.modificar(evento, idEvento)
 
 
 @app.get(
     "/eventos/estatus/{estatus}",
     tags=["Eventos"],
-    summary="Consultar eventos por estatus",
+    summary="Consultar eventos pos estatus",
     response_model=EventosSalida,
 )
-def consultarEventosPorEstatus(estatus: str) -> EventosSalida:
-    evento = Evento(
-        idEvento="123",
-        nombre="Platica del Servicio Social",
-        fechaInicio=date.today(),
-        fechaFin=date.today(),
-        cupo=100,
-        estatus=estatus,
-        descripcion="Descripcion",
-        tipo="Platica",
-        fechaRegistro=date.today(),
-        inscritos=10,
-    )
-
-    salida = EventosSalida(
-        codigo=200,
-        mensaje=f"Eventos con estatus {estatus} consultados",
-        eventos=[evento],
-    )
-    return salida
+def consultarEventosPorEstatus(request: Request, estatus: str) -> EventosSalida:
+    eventoDAO = EventoDAO(request.app.cn.db)
+    return eventoDAO.consultaPorEstatus(estatus)
 
 
 @app.put(
-    "/eventos/estatus/{idEvento}/{estatus}",
+    "/eventos/modificar/estatus",
     tags=["Eventos"],
     summary="Cambio de estatus de un evento",
     response_model=Salida,
 )
-def cambioEstatusEvento(idEvento: str, estatus: str) -> Salida:
+def cambioEstatusEvento(cambioEstatus: CambioEstatus) -> Salida:
     salida = Salida(
         codigo=200,
-        mensaje=f"Cambio de estatus del evento con ID {idEvento} a {estatus}",
+        mensaje=f"Cambio de estatus del evento con id:{cambioEstatus.idEvento} al estatus: {cambioEstatus.estatus}",
     )
     return salida
 
@@ -142,19 +83,24 @@ def cambioEstatusEvento(idEvento: str, estatus: str) -> Salida:
 @app.put(
     "/eventos/reprogramar/{idEvento}",
     tags=["Eventos"],
-    summary="Reprogramar evento",
+    summary="Reprogramar Evento",
     response_model=Salida,
 )
-def reprogramarEvento(idEvento: str, datos: ReprogramarEvento) -> Salida:
-    salida = Salida(
-        codigo=200,
-        mensaje=(
-            f"Evento con ID {idEvento} reprogramado del "
-            f"{datos.fechaInicio} al {datos.fechaFin}"
-        ),
-    )
-    return salida
+def reprogramarEvento(request: Request, idEvento: str, evento: EventoReprogramado):
+    eventoDAO = EventoDAO(request.app.cn.db)
+    return eventoDAO.reprogramar(idEvento, evento)
+
+
+@app.on_event("startup")
+def startup():
+    conexion = Conexion()
+    app.cn = conexion
+
+
+@app.on_event("shutdown")
+def shutdown():
+    app.cn.cerrar()
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", port=5000, log_level="info", reload=True)
+    uvicorn.run("main:app", reload=True)
