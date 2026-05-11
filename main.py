@@ -67,17 +67,14 @@ def consultarEventosPorEstatus(request: Request, estatus: str) -> EventosSalida:
 
 
 @app.put(
-    "/eventos/modificar/estatus",
+    "/eventos/estatus/{idEvento}/{estatus}",
     tags=["Eventos"],
     summary="Cambio de estatus de un evento",
     response_model=Salida,
 )
-def cambioEstatusEvento(cambioEstatus: CambioEstatus) -> Salida:
-    salida = Salida(
-        codigo=200,
-        mensaje=f"Cambio de estatus del evento con id:{cambioEstatus.idEvento} al estatus: {cambioEstatus.estatus}",
-    )
-    return salida
+def cambioEstatusEvento(request: Request, idEvento: str, estatus: str) -> Salida:
+    eventoDAO = EventoDAO(request.app.cn.db)
+    return eventoDAO.cambiarEstatus(idEvento, estatus)
 
 
 @app.put(

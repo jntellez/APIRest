@@ -97,7 +97,7 @@ class EventoDAO:
             "Difusion",
             "Pospuesto",
             "Proceso",
-            " Finalizado",
+            "Finalizado",
         ]
         if estatus not in estatus_permitidos:
             salida = EventosSalida(
@@ -111,6 +111,76 @@ class EventoDAO:
             except Exception as ex:
                 salida.codigo = 500
                 salida.mensaje = f"Error al consultar los eventos:{ex}"
+        return salida
+
+    def cambiarEstatus(self, idEvento: str, estatus: str) -> Salida:
+        salida = Salida(codigo=0, mensaje="")
+
+        transiciones_permitidas = {
+            "Captura": ["Revision"],
+            "Revision": ["Rechazado", "Cancelado", "Autorizado"],
+            "Rechazado": ["Captura"],
+            "Autorizado": ["Planeacion"],
+            "Planeacion": ["Difusion", "Pospuesto"],
+            "Pospuesto": ["Difusion"],
+            "Difusion": ["Proceso"],
+            "Proceso": ["Cancelado", "Finalizado"],
+        }
+
+        estatus_permitidos = [
+            "Captura",
+            "Revision",
+            "Rechazado",
+            "Autorizado",
+            "Cancelado",
+            "Planeacion",
+            "Difusion",
+            "Pospuesto",
+            "Proceso",
+            "Finalizado",
+        ]
+
+        if estatus not in estatus_permitidos:
+            salida.codigo = 404
+            salida.mensaje = "El estatus no es un valor permitido."
+            return salida
+
+        if not ObjectId.is_valid(idEvento):
+            salida.codigo = 404
+            salida.mensaje = f"El id del evento:{idEvento} no es valido."
+            return salida
+
+        try:
+            evento = self.col.find_one({"_id": ObjectId(idEvento)})
+            if not evento:
+                salida.codigo = 404
+                salida.mensaje = f"El evento con id:{idEvento} no existe."
+                return salida
+
+            estatus_actual = evento.get("estatus")
+            siguiente_estatus = transiciones_permitidas.get(estatus_actual, [])
+            if estatus not in siguiente_estatus:
+                salida.codigo = 404
+                salida.mensaje = (
+                    f"No es posible cambiar del estatus {estatus_actual} al estatus {estatus}."
+                )
+                return salida
+
+            result = self.col.update_one(
+                {"_id": ObjectId(idEvento)}, {"$set": {"estatus": estatus}}
+            )
+            if result.modified_count > 0:
+                salida.codigo = 200
+                salida.mensaje = (
+                    f"El estatus del evento con id:{idEvento} cambio a {estatus} exitosamente."
+                )
+            else:
+                salida.codigo = 500
+                salida.mensaje = "No fue posible cambiar el estatus del evento."
+        except Exception as ex:
+            salida.codigo = 500
+            salida.mensaje = f"Error:{ex}"
+
         return salida
 
     def modificar(self, evento: EventoUpdate, idEvento: str):
